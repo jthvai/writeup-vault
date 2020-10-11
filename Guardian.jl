@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: X11
-# 2020-10-11
 # Simple HTTP server for encrypted writeups
 
 import CSV
@@ -17,6 +16,7 @@ const HOST = Sockets.localhost
 const PORT = 5334
 
 const HASH_TYPE = "sha256"
+const SHA1_FORMAT = r"^[0-9a-f]{40}$"
 
 const BAD_REQUEST = 400
 const UNAUTHORISED = 401
@@ -26,7 +26,7 @@ const FAIL_RESPONSES = Dict(
   BAD_REQUEST        => """
                         {
                           "msg": "Sorry, I only speak JSON.",
-                          "ps": "Do you have the right fields?"
+                          "ps": "Do you have the right keys?"
                         }
                         """,
   UNAUTHORISED       => "What's the super secret password?\n",
@@ -52,10 +52,11 @@ function httphandler(http::HTTP.Stream)::Nothing
   end
 
   # Check that received JSON has required keys
-  if !(haskey(j, "file") && haskey(j, "flag"))
+  if !(haskey(j, "file") && haskey(j, "flag") &&
+       occursin(SHA1_FORMAT, j["file"])) # Check if filename is valid
     respond_fail(http, BAD_REQUEST)
     return
-  # Check if requested file exists
+  # Check if file exists
   elseif !isfile("$ASSETS/" * j["file"])
     respond_fail(http, NOT_FOUND)
     return
